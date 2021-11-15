@@ -101,7 +101,8 @@ void newProcessedImageFn(const void* newImage, const ClariusProcessedImageInfo* 
     (void)newImage;
     (void)pos;
     PRINTSL << "new image (" << counter_++ << "): " << nfo->width << " x " << nfo->height << " @ " << nfo->bitsPerPixel << " bpp. @ "
-            << nfo->imageSize << "bytes. @ " << nfo->micronsPerPixel << " microns per pixel. imu points: " << npos << std::flush;
+            << nfo->imageSize << "bytes. @ " << nfo->micronsPerPixel << " microns per pixel. imu points: " << npos
+            << " format: " << nfo->format << std::flush;
 }
 
 /// callback for a new spectral image sent from the scanner
@@ -235,8 +236,9 @@ void processEventLoop(std::atomic_bool& quit)
 
 int init(int& argc, char** argv)
 {
-    const int width  = 640;
-    const int height = 480;
+    int format = 0;
+    int width  = 640;
+    int height = 480;
     std::string keydir, ipAddr;
     unsigned int port = 0;
 
@@ -284,7 +286,7 @@ int init(int& argc, char** argv)
     keydir = "/tmp/";
 
     // check command line options
-    while ((o = getopt(argc, argv, "k:a:p:")) != -1)
+    while ((o = getopt(argc, argv, "k:a:p:w:h:f:")) != -1)
     {
         switch (o)
         {
@@ -297,10 +299,32 @@ int init(int& argc, char** argv)
             try { port = std::stoi(optarg); }
             catch (std::exception&) { PRINT << port; }
             break;
+        // width
+        case 'w':
+            try { width = std::stoi(optarg); }
+            catch (std::exception&) { PRINT << width; }
+            break;
+        // height
+        case 'h':
+            try { height = std::stoi(optarg); }
+            catch (std::exception&) { PRINT << height; }
+            break;
+        // height
+        case 'f':
+            try { format = std::stoi(optarg); }
+            catch (std::exception&) { PRINT << height; }
+            break;
         // invalid argument
         case '?': PRINT << "invalid argument, valid options: -a [addr], -p [port], -k [keydir]"; break;
         default: break;
         }
+    }
+
+    switch (format) {
+        case FORMAT_ARGB: PRINT << "Images will be sent in a raw and uncompressed in 32 bit argb"; break;
+        case FORMAT_JPEG: PRINT << "Images will be sent in jpeg"; break;
+        case FORMAT_PNG: PRINT << "Images will be sent in png"; break;
+        default: ERROR << "Invalid format value: 0, 1, or 2" << std::endl; return FAILURE;
     }
 
     if (!ipAddr.size())
@@ -324,12 +348,16 @@ int init(int& argc, char** argv)
         ERROR << "could not initialize caster" << std::endl;
         return FAILURE;
     }
+    if (cusCastSetFormat(format) < 0) {
+        ERROR << "could not set format" << std::endl;
+        return FAILURE;
+    }
     if (cusCastConnect(ipAddr.c_str(), port, [](int ret)
     {
         if (ret == FAILURE)
             ERROR << "could not connect to scanner" << std::endl;
         else
-            PRINT << "...connected, streaming port: " << ret;
+            PRINT << "...connected, streaming port: " << ret << std::endl;
 
     }) < 0)
     {
