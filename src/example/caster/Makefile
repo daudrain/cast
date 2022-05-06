@@ -13,7 +13,7 @@ INC_DIRS += $(CAST_SDK)/include
 INC_FLAGS := $(addprefix -I,$(INC_DIRS))
 
 CPPFLAGS += $(INC_FLAGS)
-CXXFLAGS += -std=gnu++14
+CXXFLAGS += -std=gnu++14 -g
 LDFLAGS += -L$(CAST_SDK)/lib -lcast -lpthread
 
 ifeq ($(shell uname -s),Darwin)

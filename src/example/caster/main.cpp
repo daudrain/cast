@@ -348,10 +348,10 @@ int init(int& argc, char** argv)
         ERROR << "could not initialize caster" << std::endl;
         return FAILURE;
     }
-    if (cusCastSetFormat(format) < 0) {
-        ERROR << "could not set format" << std::endl;
-        return FAILURE;
-    }
+    // if (cusCastSetFormat(format) < 0) {
+    //     ERROR << "could not set format" << std::endl;
+    //     return FAILURE;
+    // }
     if (cusCastConnect(ipAddr.c_str(), port, [](int ret)
     {
         if (ret == FAILURE)
@@ -380,8 +380,30 @@ int main(int argc, char* argv[])
         std::atomic_bool quitFlag(false);
         std::thread eventLoop(processEventLoop, std::ref(quitFlag));
         eventLoop.join();
+
+        if (cusCastIsConnected() == 1) {
+            if (cusCastDisconnect( [](int ret)
+                {
+                    if (ret == FAILURE)
+                        ERROR << "could not disconnect" << std::endl;
+                    else
+                        PRINT << "disconnected " << ret << std::endl;
+
+                }) < 0)
+            {
+                ERROR << "connection attempt failed" << std::endl;
+                return FAILURE;
+            }
+        } 
     }
 
-    cusCastDestroy();
+    int res = cusCastDestroy();
+    if (res < 0)
+    {
+        ERROR << "destroy failed " << res << std::endl;
+        return res;
+    } else {
+        PRINT << "destroyed " << std::endl;
+    }
     return rcode;
 }
